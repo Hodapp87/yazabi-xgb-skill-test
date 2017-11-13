@@ -7,15 +7,18 @@
 ###########################################################################
 
 import pandas as pd
+import sklearn.model_selection
 import sklearn.preprocessing
+import xgboost
 
 def get_processed_data():
-    """Main top-level function: Returns training & testing data,
-    preprocessed, standardized, and all categorical variables encoded.
-    Specifically, this returns (train_X, train_y, test_X, test_y),
-    where 'train_X' is a DataFrame containing features for the
-    training data, 'train_y' is a Series with the corresponding
-    labels, and likewise for 'test_X' and 'test_y' for testing data."""
+    """Returns training & testing data, preprocessed, standardized, and
+    all categorical variables encoded.  Specifically, this returns
+    (train_X, train_y, test_X, test_y), where 'train_X' is a DataFrame
+    containing features for the training data, 'train_y' is a Series
+    with the corresponding labels, and likewise for 'test_X' and
+    'test_y' for testing data.
+    """
     # Data source:
     # https://archive.ics.uci.edu/ml/machine-learning-databases/breast-cancer-wisconsin/wdbc.names
     train_raw = read_data("data/train_data.txt")
@@ -68,3 +71,43 @@ def standardize(train, test):
     train.iloc[:, :] = ss.fit_transform(train)
     # Use the same transform on test:
     test.iloc[:, :] = ss.transform(test)
+
+def tune_xgboost(train_X, train_y, filename = None, verbose = 0):
+    """Run a grid search in order to tune an xgboost model over 'train_X'
+    and corresponding 'train_y'.  If 'filename' is given, then save
+    the resultant GridSearchCV instance to this filename (for later
+    loading with sklearn.externals.joblib.load).  Optional argument
+    'verbose' is passed to GridSearchCV in case verbose output is
+    desired.
+    """
+    params = {
+        "max_depth": (3, 4, 5, 6),
+        "learning_rate": (0.1, 0.15, 0.20),
+        "gamma": (0.0, 0.05, 0.1),
+        "min_child_weight": (1,),
+        "subsample": (0.8, 0.85, 0.9, 0.95, 1.0),
+        "reg_alpha": (0, 0.05, 0.1, 0.15, 0.2),
+        "reg_lambda": (1.0, 1.1, 1.2, 1.3),
+    }
+    xgb = xgboost.XGBClassifier(nthread=-1, seed=1234, n_estimators=150)
+    cv = sklearn.model_selection.GridSearchCV(xgb, params, cv=5, verbose=verbose)
+    cv.fit(train_X, train_y)
+    if filename:
+        sklearn.externals.joblib.dump(cv, filename)
+    if verbose:
+        print("Optimal score:")
+        print(cv.best_score_)
+        print("Optimal parameters:")
+        print(cv.best_params_)
+    
+if __name__ == '__main__':
+    train_X, train_y, test_X, test_y = get_processed_data()
+    # Train model over data, tune with grid search, and save to file:
+    fname = "xgboost_gridsearch.pkl"
+    tune_xgboost(train_X, train_y, fname, verbose=1)
+
+    # Load model from file, and apply to test data:
+    model = sklearn.externals.joblib.load(fname)
+    test_y_pred = model.predict(test_X)
+    test_acc = sklearn.metrics.accuracy_score(test_y, test_y_pred)
+    print("Testing accuracy: {0}".format(test_acc))
