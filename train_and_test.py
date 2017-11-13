@@ -99,12 +99,26 @@ def tune_xgboost(train_X, train_y, filename = None, verbose = 0):
         print(cv.best_score_)
         print("Optimal parameters:")
         print(cv.best_params_)
-    
+
+def xgboost_model(train_X, train_y):
+    """Train an xgboost model from the given data using parameters already
+    found from grid search."""
+    params = { 'subsample': 0.8, 'min_child_weight': 1, 'reg_lambda': 1.2,
+               'learning_rate': 0.1, 'reg_alpha': 0.15, 'max_depth': 3,
+               'gamma': 0.0 }
+    xgb = xgboost.XGBClassifier(nthread=-1, seed=1234, n_estimators=150,
+                                **params)
+    xgb.fit(train_X, train_y)
+    return xgb    
+
 if __name__ == '__main__':
     train_X, train_y, test_X, test_y = get_processed_data()
     # Train model over data, tune with grid search, and save to file:
     fname = "xgboost_gridsearch.pkl"
-    tune_xgboost(train_X, train_y, fname, verbose=1)
+    #tune_xgboost(train_X, train_y, fname, verbose=1)
+    # Or, to skip the lengthy GridSearchCV:
+    #xgb = xgboost_model(train_X, train_y)
+    #sklearn.externals.joblib.dump(xgb, fname)
 
     # Load model from file, and apply to test data:
     model = sklearn.externals.joblib.load(fname)
