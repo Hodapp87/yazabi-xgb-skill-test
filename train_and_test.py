@@ -72,13 +72,10 @@ def standardize(train, test):
     # Use the same transform on test:
     test.iloc[:, :] = ss.transform(test)
 
-def tune_xgboost(train_X, train_y, filename = None, verbose = 0):
+def tune_xgboost(train_X, train_y, verbose = 0):
     """Run a grid search in order to tune an xgboost model over 'train_X'
-    and corresponding 'train_y'.  If 'filename' is given, then save
-    the resultant GridSearchCV instance to this filename (for later
-    loading with sklearn.externals.joblib.load).  Optional argument
-    'verbose' is passed to GridSearchCV in case verbose output is
-    desired.
+    and corresponding 'train_y'.  Optional argument 'verbose' is
+    passed to GridSearchCV in case verbose output is desired.
     """
     params = {
         "max_depth": (3, 4, 5, 6),
@@ -92,13 +89,12 @@ def tune_xgboost(train_X, train_y, filename = None, verbose = 0):
     xgb = xgboost.XGBClassifier(nthread=-1, seed=1234, n_estimators=150)
     cv = sklearn.model_selection.GridSearchCV(xgb, params, cv=5, verbose=verbose)
     cv.fit(train_X, train_y)
-    if filename:
-        sklearn.externals.joblib.dump(cv, filename)
     if verbose:
         print("Optimal score:")
         print(cv.best_score_)
         print("Optimal parameters:")
         print(cv.best_params_)
+    return cv
 
 def xgboost_model(train_X, train_y):
     """Train an xgboost model from the given data using parameters already
@@ -115,10 +111,10 @@ if __name__ == '__main__':
     train_X, train_y, test_X, test_y = get_processed_data()
     # Train model over data, tune with grid search, and save to file:
     fname = "xgboost_gridsearch.pkl"
-    tune_xgboost(train_X, train_y, fname, verbose=1)
-    # Or, to skip the lengthy GridSearchCV:
+    xgb = tune_xgboost(train_X, train_y, fname, verbose=1)
+    # Or, to skip a lengthy GridSearchCV, comment above & uncomment below:
     #xgb = xgboost_model(train_X, train_y)
-    #sklearn.externals.joblib.dump(xgb, fname)
+    sklearn.externals.joblib.dump(xgb, fname)
 
     # Load model from file, and apply to test data:
     model = sklearn.externals.joblib.load(fname)
