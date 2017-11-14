@@ -111,7 +111,7 @@ if __name__ == '__main__':
     train_X, train_y, test_X, test_y = get_processed_data()
     # Train model over data, tune with grid search, and save to file:
     fname = "xgboost_gridsearch.pkl"
-    xgb = tune_xgboost(train_X, train_y, fname, verbose=1)
+    xgb = tune_xgboost(train_X, train_y, verbose=1)
     # Or, to skip a lengthy GridSearchCV, comment above & uncomment below:
     #xgb = xgboost_model(train_X, train_y)
     sklearn.externals.joblib.dump(xgb, fname)
